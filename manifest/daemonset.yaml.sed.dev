@@ -1,0 +1,337 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    component: {{.name}}
+    {{.labels.key}}: {{.labels.value}}
+  name: {{.name}}
+  namespace: {{.namespace}}
+spec:
+  selector:
+    matchLabels:
+      component: {{.name}}
+  template:
+    metadata:
+      labels:
+        component: {{.name}}
+    spec:
+      serviceAccountName: {{.service.account}}
+      terminationGracePeriodSeconds: 3
+      hostNetwork: false 
+      restartPolicy: Always
+      nodeSelector:
+        databasenode: "true"
+      containers:
+        # redis 0
+        - name: {{.name1}}
+          image: {{.image1}}
+          imagePullPolicy: {{.image.pull.policy}}
+          env:
+            - name: PORT
+              value: "6379"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          envFrom:
+            - configMapRef:
+                name: {{.env.cm}}
+          command:
+            - /usr/local/bin/redis.sh
+          args:
+            - redis-server
+            - /usr/local/etc/redis/redis.conf 
+          ports:
+            - containerPort: 6379 
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+              readOnly: true
+            #- name: redis0
+              #mountPath: /data 
+            - name: config 
+              mountPath: /tmp/redis.conf 
+              subPath: redis.conf 
+              readOnly: true
+            - name: runable
+              mountPath: /usr/local/bin/redis.sh
+              subPath: redis.sh
+              readOnly: true
+        # redis 1
+        - name: {{.name2}}
+          image: {{.image2}}
+          imagePullPolicy: {{.image.pull.policy}}
+          env:
+            - name: PORT
+              value: "6380"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          command:
+            - /usr/local/bin/redis.sh
+          args:
+            - redis-server
+            - /usr/local/etc/redis/redis.conf
+          ports:
+            - containerPort: 6380
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+              readOnly: true
+            #- name: redis1
+              #mountPath: /data
+            - name: config
+              mountPath: /tmp/redis.conf
+              subPath: redis.conf
+              readOnly: true
+            - name: runable
+              mountPath: /usr/local/bin/redis.sh
+              subPath: redis.sh
+              readOnly: true
+        # cassandra
+        - name: {{.name3}}
+          image: {{.image3}}
+          imagePullPolicy: {{.image.pull.policy}}
+          env:
+            - name: CLUSTER_NAME 
+              value: {{.name}}-test
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          envFrom:
+            - configMapRef:
+                name: {{.env.cm}}
+          command:
+            - /usr/local/bin/cassandra.sh 
+          ports:
+            - containerPort: 9042 
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: cassandra  
+              mountPath: /var/lib/cassandra 
+            - name: config 
+              mountPath: /tmp/cassandra.yaml 
+              subPath: cassandra.conf 
+              readOnly: true
+            - name: runable 
+              mountPath: /usr/local/bin/cassandra.sh 
+              subPath: cassandra.sh 
+              readOnly: true
+        # proxy
+        - name: {{.name4}}
+          image: {{.image4}}
+          imagePullPolicy: {{.image.pull.policy2}}
+          command: ["/usr/local/bin/rest"]
+          args:
+            - -p
+            - "{{.port}}" 
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: config 
+              mountPath: /workspace/server.js 
+              subPath: server.js 
+        # sentinel0 
+        - name: {{.name8}}
+          image: {{.image7}}
+          imagePullPolicy: {{.image.pull.policy2}}
+          env:
+            - name: PORT
+              value: "26379"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          envFrom:
+            - configMapRef:
+                name: {{.env.cm}}
+          command:
+            - /usr/local/bin/sentinel.sh 
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: runable 
+              mountPath: /usr/local/bin/sentinel.sh 
+              subPath: sentinel.sh 
+              readOnly: true
+        # sentinel1 
+        - name: {{.name9}}
+          image: {{.image7}}
+          imagePullPolicy: {{.image.pull.policy2}}
+          env:
+            - name: PORT
+              value: "26380"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          envFrom:
+            - configMapRef:
+                name: {{.env.cm}}
+          command:
+            - /usr/local/bin/sentinel.sh 
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: runable 
+              mountPath: /usr/local/bin/sentinel.sh 
+              subPath: sentinel.sh 
+        # dev 
+        - name: {{.name10}}
+          image: {{.image10}}
+          imagePullPolicy: {{.image.pull.policy2}}
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          volumeMounts:
+            - name: host-time
+              mountPath: /etc/localtime
+      volumes:
+        - name: host-time
+          hostPath:
+            path: /etc/localtime
+        - name: mem-info 
+          hostPath:
+            path: /proc/meminfo
+        - name: redis0
+          hostPath:
+            path: /data/redis0
+        - name: redis1
+          hostPath:
+            path: /data/redis1
+        - name: cassandra 
+          hostPath:
+            path: /data/cassandra
+        - name: runable
+          configMap:
+            name: {{.scripts.cm}}
+            defaultMode: 0755
+        - name: config
+          configMap:
+            name: {{.conf.cm}}

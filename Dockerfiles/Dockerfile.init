@@ -1,0 +1,6 @@
+FROM lowyard/golang-dev:latest as build
+ADD src/svc.go /workspace/
+WORKDIR /workspace
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o svc .
+FROM redis:5 
+COPY --from=build /workspace/svc /usr/local/bin/

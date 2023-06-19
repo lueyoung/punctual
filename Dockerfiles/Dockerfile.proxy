@@ -1,0 +1,18 @@
+FROM lowyard/golang-dev:latest as build
+WORKDIR /go/src
+RUN echo 106
+RUN git clone -v https://github.com/humstarman/dbuntil.git
+RUN echo 1
+RUN git clone -v https://github.com/humstarman/tableFormat.git 
+ADD src/get.go /workspace/src/
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /workspace/bin/get /workspace/src/get.go
+ADD src/put.go /workspace/src/
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /workspace/bin/put /workspace/src/put.go
+ADD src/rest.go /workspace/src/
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /workspace/bin/rest /workspace/src/rest.go
+FROM bash:latest 
+COPY --from=build /workspace/bin/rest /usr/local/bin/
+COPY --from=build /workspace/bin/get /usr/local/bin/
+COPY --from=build /workspace/bin/put /usr/local/bin/
+ADD model/getModelDef.txt /workspace/
+CMD ["/usr/local/bin/rest"]

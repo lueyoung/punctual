@@ -1,0 +1,15 @@
+FROM lowyard/golang-dev:latest
+WORKDIR /go/src
+RUN echo 0
+RUN git clone -v https://github.com/humstarman/inClusterServiceDiscovery.git
+RUN git clone -v https://github.com/humstarman/dbuntil.git
+RUN git clone -v https://github.com/humstarman/tableFormat.git 
+ADD src/get.go /workspace/src/
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /usr/local/bin/get /workspace/src/get.go
+ADD src/put.go /workspace/src/
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /usr/local/bin/put /workspace/src/put.go
+ADD src/rest.go /workspace/src/
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /usr/local//bin/rest /workspace/src/rest.go
+ADD src/dev.go /workspace/src/
+WORKDIR /workspace/src
+CMD ["tail","-f","/dev/null"]

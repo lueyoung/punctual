@@ -1,0 +1,9 @@
+FROM lowyard/golang-dev:latest as build
+ADD src/svc.go /workspace/
+ADD src/sentinel.go /workspace/
+WORKDIR /workspace
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o sentinel sentinel.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o svc svc.go
+FROM redis:5 
+COPY --from=build /workspace/sentinel /usr/local/bin/
+COPY --from=build /workspace/svc /usr/local/bin/
